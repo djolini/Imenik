@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="sr" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Imenik</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+      $(document).ready(function(){
+        $('#search').on("keyup", function(){
+          var tekst = $(this).val().toLowerCase();
+          var covekID = 0;
+
+          $('table tbody tr').each(function(){
+            $red = $(this);
+            var ime = $red.find('td:nth-child(1)').text().toLowerCase();
+
+            if (ime.search(tekst) < 0) {
+              $red.hide();
+            } else {
+              $red.show();
+            }
+          });
+        });
+
+        $('#dodavanje').click(function(event){
+          $('#inputImePrezime').val('');
+          $('#inputBrojTelefona').val('');
+        });
+
+        $('#btnDodaj').click(function(event) {
+          var ime = $('#inputImePrezime').val();
+          var tel = $('#inputBrojTelefona').val();
+
+          if ((ime == '') || (tel == '')) {
+            $('#dlgDodavanje .modal-body').prepend('<div id="greskaUnos" class="alert alert-danger alert-dismissible"><strong>Greška!</strong> Sva polja moraju da budu popunjena.<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+          } else {
+            var zahtev = $.ajax({
+              url: 'core/api.php',
+              type: 'POST',
+              data: {komanda : 'upis', imePrezime : ime, telefon : tel},
+              dataType: 'xml',
+              success: function(podaci) {
+                $('#inputImePrezime').val('');
+                $('#inputBrojTelefona').val('');
+                $('#dlgDodavanje').modal('hide');
+                osveziTabelu();
+              },
+              error: function(podaci) {
+                $('.container').empty();
+                alert('Doslo je do greške u komunikaciji!');
+              }
+            });
+          }
+        });
+
+        $('#btnBrisi').click(function(event) {
+          var zahtev = $.ajax({
+            url: 'core/api.php',
+            type: 'POST',
+            data: {komanda : 'brisanje', id : covekID},
+            dataType: 'xml',
+            success: function(podaci) {
+              $('#dlgBrisanje').modal('hide');
+              osveziTabelu();
+            },
+            error: function() {
+              $('.container').empty();
+              alert('Doslo je do greške u komunikaciji!');
+            }
+          });
+        });
+
+        $('#btnIzmeni').click(function(event) {
+          var ime = $('#inputImePrezimeEdit').val();
+          var tel = $('#inputBrojTelefonaEdit').val();
+
+          if ((ime == '') || (tel == '')) {
+            $('#dlgEdit .modal-body').prepend('<div id="greskaUnos" class="alert alert-danger alert-dismissible"><strong>Greška!</strong> Sva polja moraju da budu popunjena.<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+          } else {
+            var zahtev = $.ajax({
+              url: 'core/api.php',
+              type: 'POST',
+              data: {komanda : 'izmena', id : covekID, imePrezime : ime, telefon : tel},
+              dataType: 'xml',
+              success: function(podaci) {
+                $('#inputImePrezimeEdit').val('');
+                $('#inputBrojTelefonaEdit').val('');
+                $('#dlgEdit').modal('hide');
+                osveziTabelu();
+              },
+              error: function() {
+                $('.container').empty();
+                alert('Doslo je do greške u komunikaciji!');
+              }
+            });
+          }
+        });
+
+        osveziTabelu();
+
+        function osveziTabelu() {
+          $('#sadrzajTabele').empty();
+
+          var zahtev = $.ajax({
+            url: 'core/api.php',
+            type: 'POST',
+            data: {komanda : 'citanje'},
+            dataType: 'xml',
+            success: function(podaci) {
+              $(podaci).find('covek').each(function() {
+                var idXML = $(this).find('id').text();
+                var imePrezimeXML = $(this).find('imePrezime').text();
+                var telefonXML = $(this).find('telefon').text();
+
+                $('#sadrzajTabele').append('<tr><td class="col-sm-6" id="bazuzu">' + imePrezimeXML + '</td><td class="col-sm-4">' + telefonXML + '</td><td class="col-sm-2"><a href="#" class="edit" title="Izmeni" data-toggle="tooltip" id="edt' + idXML + '"><i class="material-icons">&#xE254;</i></a><a href="#" class="delete" title="Briši" data-toggle="tooltip" id="del' + idXML + '"><i class="material-icons">&#xE872;</i></a></td></tr>');
+              });
+              $('[data-toggle="tooltip"]').tooltip();
+
+              $('a.delete').click(function(event) {
+                covekID = $(this).attr('id').substring(3, $(this).attr('id').length);
+                $('#dlgBrisanje').modal('show');
+              });
+
+              $('a.edit').click(function(event) {
+                var trenutniRed = $(this).closest("tr");
+                covekID = $(this).attr('id').substring(3, $(this).attr('id').length);
+
+                $('#inputImePrezimeEdit').val(trenutniRed.find("td:eq(0)").text());
+                $('#inputBrojTelefonaEdit').val(trenutniRed.find("td:eq(1)").text());
+
+                $('#dlgEdit').modal('show');
+              });
+            },
+            error: function() {
+              $('.container').empty();
+              alert('Doslo je do greške u komunikaciji!');
+            }
+          });
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="table-wrapper">
+        <div class="table-title">
+          <div class="row">
+            <div class="col-sm-6">
+              <h2>Telefonski <b>imenik</b> <i class="fa fa-mobile" aria-hidden="true"></i></h2>
+            </div>
+            <div class="col-sm-6">
+              <div class="search-box">
+                <div class="input-group">
+                  <input type="text" id="search" class="form-control" placeholder="Pretraga po imenu">
+                  <span class="input-group-addon"><i class="material-icons">&#xE8B6;</i></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <table class="table table-striped">
+          <thead>
+            <th class="col-sm-6">Ime i prezime</th>
+            <th class="col-sm-4">Broj telefona</th>
+            <th class="col-sm-2"></th>
+          </thead>
+          <tbody id="sadrzajTabele">
+            <tr>
+              <td class="col-sm-6">Djordje Milicevic(developer)</td>
+              <td class="col-sm-4">061 19 017 03</td>
+              <td class="col-sm-2">
+                <a href="#" class="edit" title="Izmeni" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>
+                <a href="#" class="delete" title="Briši" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>
+              </td>
+            </tr>
+            <tr>
+              <td class="col-sm-6">Zika Zikic</td>
+              <td class="col-sm-4">+381.1236545</td>
+              <td class="col-sm-2">
+                <a href="#" class="edit" title="Izmeni" data-toggle="tooltip"><i class="material-icons">&#xE254;</i></a>
+                <a href="#" class="delete" title="Briši" data-toggle="tooltip"><i class="material-icons">&#xE872;</i></a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <button type="button" id="dodavanje" class="btn btn-primary" data-toggle="modal" data-target="#dlgDodavanje">Dodaj</button>
+      </div>
+      <div id="dlgDodavanje" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+              <h4 class="modal-title">Dodavanje</h4>
+            </div>
+            <div class="modal-body">
+              <form>
+                <div class="form-group">
+                  <label for="inputImePrezime">Ime i prezime</label>
+                  <input type="text" class="form-control" id="inputImePrezime" placeholder="Ovde uneti ime i prezime" required>
+                </div>
+                <div class="form-group">
+                  <label for="inputBrojTelefona">Broj telefona</label>
+                  <input type="text" class="form-control" id="inputBrojTelefona" placeholder="Ovde uneti broj telefona" required>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Odustani</button>
+              <button type="button" class="btn btn-primary" id="btnDodaj">Dodaj u bazu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="dlgBrisanje" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+              <h3 class="modal-title" id="myModalLabel">Brisanje</h3>
+            </div>
+            <div class="modal-body">
+              <h4>Da li ste sigurni da trajno želite da obrišete odabranu osobu?</h4>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Odustani</button>
+              <button type="button" class="btn btn-danger" id="btnBrisi">Briši</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="dlgEdit" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+              <h3 class="modal-title" id="myModalLabel">Izmena</h3>
+            </div>
+            <div class="modal-body">
+              <form>
+                <div class="form-group">
+                  <label for="inputImePrezimeEdit">Ime i prezime</label>
+                  <input type="text" class="form-control" id="inputImePrezimeEdit" placeholder="Ovde uneti ime i prezime" required>
+                </div>
+                <div class="form-group">
+                  <label for="inputBrojTelefonaEdit">Broj telefona</label>
+                  <input type="tel" class="form-control" id="inputBrojTelefonaEdit" placeholder="Ovde uneti broj telefona" required>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Odustani</button>
+              <button type="button" class="btn btn-primary" id="btnIzmeni">Izmeni</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
